@@ -1,6 +1,4 @@
-Here’s a **clean, professional README.md** you can drop into the root of your `heat-method-modified` repo. It’s written to be skim-friendly for SGI reviewers and technically clear for anyone who wants to reproduce your results.
 
-You can copy–paste this as `README.md` and tweak the mesh names if needed.
 
 ---
 
@@ -149,5 +147,6 @@ This project uses the `potpourri3d` library by Nicholas Sharp for geometry proce
 Beamlak Lefebo
 Email: beamlak-at-beam-dot-rip
 This repository accompanies an application to the MIT Summer Geometry Initiative and is intended as a small, reproducible research study in geometry processing.
+
 
 
