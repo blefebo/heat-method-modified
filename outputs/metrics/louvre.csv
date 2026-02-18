@@ -1,0 +1,13 @@
+mesh,mesh_path,noise_frac,k_sources,sources,use_robust,t_coef,rel_L2,rel_Linf,roughness
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.05,,,17496.80361173212
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.0809383877820033,,,17264.013661917354
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.13102045233499882,,,17005.43126544802
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.21209168356927224,,,16671.288757368024
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.343327178601354,,,16258.171970421145
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.55576696635475,,,15794.67062301562
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,0.8996576447849663,,,15269.473879548683
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,1.456336786492988,,,14654.661302589473
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,2.35747103132732,,,13923.820708587209
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,3.8161980903681987,,,13113.603309391085
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,6.177538417823236,,,12245.029715601166
+louvre.obj,data/meshes/louvre.obj,0.0,1,4959,True,10.0,,,11370.485800963022

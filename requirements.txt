@@ -1,0 +1,5 @@
+potpourri3d
+numpy
+scipy
+matplotlib
+polyscope

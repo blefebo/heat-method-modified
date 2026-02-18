@@ -1,0 +1,2 @@
+mesh,noise_frac,use_robust,sources,k_sources,t_coef,rel_L2,rel_Linf,roughness
+louvre.obj,0.0,True,4959,1,0.05,,,17496.80361173212

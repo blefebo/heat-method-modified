@@ -1,0 +1,160 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, graphicx, subcaption}
+
+\begin{document}
+\title{Heat Method Modification with Sweeping Time Coefficient}
+\author{Beamlak Lefebo}
+\maketitle
+\begin{abstract}
+The heat method for computing geodesic distance over surfaces was implemented with a modification to the time parameter. 
+In particular, rather than the optimal time parameter value described in Crane 2017, an approach to the time coefficient using 
+sweeping t-coefficient values was used to examine whether a heuristic approach to initiating geodesic distance calculations would yield
+lower error values, in addition to testing the robustness of the time coefficient estimates by evaluating the tradeoff of smoothness addition
+accuracy while subject to Gaussian noise in the data meshes given. The study reinforces the findings of the original Crane paper that demonstrated
+an optimal estimate for the diffusion time coefficient value used in computing geodesic distances in an efficient manner while also demonstrating
+the calculation-smoothing tradeoff that comes with exceedingly large or small time coefficients, respectively. imitation of the modifications present in the experiments section is that the program is unable to handle non-manifolds.
+The results demonstrate a consistent stability–smoothing tradeoff: small diffusion times yield unstable, noisy distance fields, while large diffusion times oversmooth geodesic structure on meshes with thin features, leading to increased error.  
+\end{abstract}
+
+\section{Introduction}
+The heat method is a computationally efficient means of computing geodesic distances on surfaces by simulating heat flow. The propagation of heat is modeled using a heat kernel $k_{t, x}(y)$,w hich, in Varadhan's formula given by
+$$\phi (x, y) = lim_{t \to 0} \sqrt{-4t \log k_{t, x}(y)}$$
+demonstrates how heat is transferred from a source $x$ to a destination $y$ over some time $t$. As the time parameter approaches 0, $k_{t, x}$ concentrates along shortest paths (geodesics) and thereby allowing for the use of the heat gradients (now aligned with distance for small time intervals) and thus utilizes Vardhan's formula to compute heat flow, normalize the resultant gradient, and use a Poisson equation solver to find stable numeric solutions to distance computations by rapidly providing several numerical solutions to linear problems rather than directly computing numeric values for (1). 
+\newline
+The time coefficient discretization in the initial formulation of the heat method problem was given as 
+$$t = h^{2}$$
+where $h$ represents the mean spacing between adjacent nodes. The primary motivation for this reasoning behind this was presented as the invariance of $h^{2} \Delta$ with respect to scale and refinement, but as an under-explored aspect of this method, with regard to general optimization of the algorithm as well as in addressing the robustness of the model in the case of variable spacing.
+\section{Background}
+The experiments on the heat method are ultimately grounded a computational geometric approach to computing geodesic distances, with an eye to optimizing the core components of the heat method algorithm. The algorithm itself can be summarized in three key steps:
+\begin{enumerate}
+\item Integrate the heat flow for some fixed time $t$ (i.e. integrate $\frac{du}{dt} = \Delta u$
+\item Evaluate the vector field $X = -\frac{\nabla u}{|\nabla u|}$
+\item Solve the Poisson equation $\Delta \phi = \nabla \cdot X$
+\end{enumerate}
+
+The function $\phi$ is used to approximate the geodesic distance from some source vertex, with the true distance the limit of this function as $t \to 0$. The resulting temperature gradient is then normalized and negated to get a unit vector field $X$, with field lines pointing along geodesics. Finally, the solutions to the Poisson equation in step 3 gives the function whose gradient follows our unit vector field $X$ recovers the final distance computation.
+\newline
+Time coefficient selection obviously represents a decision that will propagate throughout the second and third step of the algorithm. The time coefficient is also critical in determining the scale of diffusion. The importance placed on the selection of an optimal time coefficient largely comes down to the tradeoff that exists in the algorithm between smoothing and the stability of our solutions.
+\newline
+Another more conventional approach to computing geodesic distances can be found in the fast marching method (FMM). This algorithm similarly computes geodesic distance. It is essentially a continuous analogue to the discrete approach of Dijkstra's Algorithm, which is itself used for calculating the shortest path distances from a source vertex to all other vertices on a weighted undirected graph. FMM instead provides numerical solutions to the Eikonal equation given by
+$$|\nabla u(x)| = \frac{1}{f(x)}, x \in \Omega$$
+ which on triangulated domains involves solving
+ $$|\nabla _{S} u(x)| = \frac{1}{f(x)}, x \in S$$
+ for some surface $S$. The greedy algorithm approach to solving this equation begins with discretizing the surface to a mesh, then labeling nodes (which can number from 1 to $n$ when solving the above PDE in $R^{n}$) as either far/unvisited, considered/tentatively assigned, and accepted/permanently assigned. The key differentiator in how these node values are calculated also lends to the efficiency of this algorithm relative to other more conventional means of distance computation; rather than using a single neighboring node to the source to compute the weights, multiple neighbors are used and the greedy algorithm's extension leads to more stable geodesic distance computations. 
+$$u(x) = 0, x \in \delta \Omega$$
+\section{Methods}
+The experiments included in this paper seek to empirically study the effects of different time coefficients in the relative error. We compute geodesic distance on triangle meshes using the heat method as implemented in the potpourri3d library. For a given mesh with vertices $V \subset S$ and faced $F$ in some set of vertex sources $S$, the heat method computes a distance by solving a sequence of elliptic problems on the mesh, as described in the background section. The short-time heat diffusion is performed by providing numerical solution to
+$$(M - tL)u = M \delta _{s}$$
+where $L$ is the cotangent Laplace, $M$ is the mass matrix, $\delta _{s}$ the source indicator function, and $t$ is, of course, the time parameter central to this investigation.
+\newline
+Having concluded the first step of the heat method algorithm, the results are then used to complete step 2 in which the normalized vector field $X$ is computed from the gradient of the diffused signal, and step 3 in which the Poisson solve for $L \phi = \nabla \cdot X$, and thus yielding the solution $\phi$ for the geodesic distance up to some added constant of integration. We subtract the minimum value in order to shift to nonnegative distances.
+\newline
+Having highlighted the most relevant portion of the heat method involving the time parameter, we note that the diffusion time is parametrized by a dimensionless constant in the potpourri3d library. This scales the intrinsic time step relative to mesh resolution. In theory, larger values for the time coefficient would increase the numerical stability of our results, but come at the cost of additional smoothing of our curves. On the other hand, larger values for the time coefficient will preserve sharper features and result in greater smoothness overall at the expense of artifacts in out computation. We seek to study the optimal time coefficient selection for various morphologies that represent a range of manifold surfaces over which the heat method distance computation algorithm may be regularly utilized, with both qualitative and quantitative observation providing insight to time parameter modifications' effect on relative error of our calculations compared to FMM.
+\subsection{Error Calculation via FMM}
+To quantify accuracy, we compare the heat method distances computed over several values for the time coefficient to the distances computed using FMM over triangular meshes, implemented in potpourri3d. For a fixed mesh and source, we compute a reference distance field
+$$d_{ref} = d_{FMM}(V, F, S)$$
+which gives an approximation of the distance as described in the background section. This is utilized to provide a baseline for geodesic computation out of convention and to provide a basis for our conclusions and comparison against the time parameter selection.
+\subsection{Time Parameter Sweeping}
+For each mesh and source, we evaluate the heat method over a log-spaced range of diffusion time coefficients. For each value of $tcoef_{i}$, we compute the heat method distance field
+$$d_{heat} = d_{Heat}(V, F, S; tcoef_{i})$$
+and hold all other solver settings fixed as a means of isolating the effect of the heat diffusion time parameter from other implementation details.
+\newline
+In order to reduce sensitivity to initial source placement, we also either fix a single source vertex for each mesh or average the results over a small number of randomly selected source vertices.
+\subsection{Measuring Accuracy}
+For each time coefficient, we compute a pointwise error field given by
+$$e_{i} = d_{heat}(tcoef_{i}) - d_{ref}$$
+and use two scalar metrics to summarize this field (Relative $L^{2}$ error and relative $L^{\infty}$ error) given below:
+$$L^{2} = \frac{||e_{i}||_{2}}{||d_{ref}||_{2} + \varepsilon}$$
+$$L^{\infty} = \frac{||e_{i}||_{\infty}}{||d_{ref}||_{\infty} + \varepsilon}.$$
+The values for our relative errors are shown in the figures in the section below.
+\section{Results}
+We evaluated the sensitivity of the heat method's diffusion time parameter on give meshes with distinct morphology. This list consists of two familiar meshes a sphere (smooth, uniform geometry), the Stanford bunny (moderate curvature and thin appendages). This list also consists of three meshes from the Metropolitan Museum of Art's Thingiverse page in which models of artifacts are available for open access use. These consist of a strigilated vase (Roman, c.a. 200; thin grooves and high curvature ridges) and two scanned statues with thin features and nonuniform triangulation: Saint Bartholomew (Italian, dated after 1738) and Musette, a Maltese dog (after a model by Albert-Ernest Carrier-Belleuse, 1855-68).
+\newline
+For each mesh, we report relative $L^{2}$ and $L^{\infty}$ error with respect to fast marching distances as well as a roughness proxy given by $|d^{T}Ld|$ measuring smoothness of the distance field to study the smoothness-stability tradeoff.
+\subsection{Accuracy Trends}
+Across all meshes, the error curves exhibit a strong dependence on $tcoef$, with qualitatively different behavior depending on morphology. On the sphere, both relative $L^{2}$ and $L^{\infty}$ error decrease monotonically over the tested range of $tcoef$, indicating that increased diffusion primarily improves stability on smooth, uniformly sampled surfaces without inducing harmful oversmoothing. In contrast, meshes with thin features and higher curvature (bunny, St. Bartholomew, Musette the Maltese) exhibit a pronounced non-monotonic trend: error decreases as the time coefficient increases from small values, reaches a clear minimum near $tcoef \approx 1$, and then increases again for larger values. This U-shaped curve reflects a stability-smoothing tradeoff, where under-diffusion with too small a t parameter leads to noisy distance fields. On the other hand, over-diffusion with too large a t parameter increasingly distorts geodesic structure across narrow regions.
+The strigilated vase displays intermediate behavior: error decreases steadily with $tcoef$ over the tested range, with diminishing returns at larger values. This suggests that repeated narrow grooves and ridges benefit from additional diffusion for stability, but that oversmoothing artifacts are less severe than in meshes with pronounced thin handles. Notably, the optimal $tcoef$ varies across shapes, with the more non-uniform statue scans exhibiting sharper minima than the bunny and sphere, indicating greater sensitivity to parameter choice in real-world scanned geometry.
+\subsection{Smoothness-Accuracy Tradeoff}
+For all meshes, the roughness proxy $|d^{T} L d|$  increases monotonically with $tcoef$, confirming that larger diffusion times produce progressively smoother distance fields. This monotone increase in smoothness contrasts with the non-monotone behavior of accuracy on meshes with thin features, highlighting a fundamental tradeoff: beyond a certain point, additional smoothing improves numerical stability but degrades accuracy. The sphere exhibits the steepest increase in smoothness with little penalty to accuracy, while statue scans show rapid increases in roughness coinciding with the onset of accuracy degradation for large $tcoef$. These observations provide empirical evidence that the diffusion parameter controls a continuous interplay between unstable but geometrically accurate solutions and stable but over-smoothed solutions.
+\subsection{Parameter Regimes}
+Taken together, these results suggest that no single diffusion time is optimal across all morphologies. Smooth, well-sampled surfaces tolerate relatively large $tcoef$ values with monotonic accuracy gains, whereas meshes with thin features and irregular triangulation exhibit a narrow optimal range centered around $tcoef \approx 1$, beyond which oversmoothing degrades geodesic accuracy. These trends motivate morphology-aware parameter selection and suggest that adaptive or locally varying diffusion times may further improve robustness of the heat method in practical geometry processing pipelines.
+\begin{figure*}[t]
+  \centering
+
+  % -------- Top row: Error vs t_coef (5 meshes) --------
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/strigilated_vase.obj_noise0.0_robustTrue_k1_error.png}
+    \caption{Strigilated vase}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/sphere.obj_noise0.0_robustTrue_k1_error.png}
+    \caption{Sphere}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/bunny.obj_noise0.0_robustTrue_k1_error.png}
+    \caption{Bunny}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/stbarth.obj_noise0.0_robustTrue_k1_error.png}
+    \caption{St.\ Bartholomew}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/musette_maltese.obj_noise0.0_robustTrue_k1_error.png}
+    \caption{Musette Maltese}
+  \end{subfigure}
+
+  \medskip
+
+  % -------- Bottom row: Roughness vs t_coef (5 meshes) --------
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/strigilated_vase.obj_noise0.0_robustTrue_k1_roughness.png}
+    \caption{Strigilated vase}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/sphere.obj_noise0.0_robustTrue_k1_roughness.png}
+    \caption{Sphere}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/bunny.obj_noise0.0_robustTrue_k1_roughness.png}
+    \caption{Bunny}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/stbarth.obj_noise0.0_robustTrue_k1_roughness.png}
+    \caption{St.\ Bartholomew}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.19\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{../outputs/figures/musette_maltese.obj_noise0.0_robustTrue_k1_roughness.png}
+    \caption{Musette Maltese}
+  \end{subfigure}
+
+  \caption{Top row: Relative $L^2$ and $L^\infty$ error versus diffusion parameter $t_{\mathrm{coef}}$ for five meshes. Bottom row: Roughness proxy $|d^\top L d|$ versus $t_{\mathrm{coef}}$ for the same meshes. Together these plots illustrate the stability--smoothing tradeoff and its dependence on mesh morphology.}
+  \label{fig:all-meshes-error-roughness}
+\end{figure*}
+
+\section{Discussion}
+The experiments highlight that the time parameter in the heat method clearly impacts the stability-smoothness tradeoff in geodesic distance computation. Moreover, there is also an indication that the degree of the impact depends very strongly on mesh morphology or uniformity. On smooth, uniformly sampled geometry (such as is the case with the sphere) the increasing time coefficient monotonically improves stability and reduces error relative to FMM, with no observed penalty for oversmoothing. This suggests that well-behaved meshes should indicate a need for relatively larger diffusion times to improve robustness.
+\newline
+On the other hand, for meshes with sharp curvature, irregular triangulation, or other less "well-behaving" traits, there is a non-monotonic dependence on the time coefficient. Smaller values of $t$ result in noisy distance fields as well as artifacts, while exceedingly large values lead to shortcutting across narrow regions and both omission of features as well as alrger errors. The presence of a clear intermediate optimal value reflects a genuine tradeoff between numerical stability and geometric accuracy. The location and sharpness of this optimal selection also varies with object morphology. That is, scanned (often irregular) meshes show narrower optimal ranges while uniformly selected samples show less sensitivity and a broader optimal range.
+\newline
+The roughness metric increases monotonically 
+with $t$ across all meshes, confirming that the parameter directly controls the smoothness of the distance field. The fact that accuracy degrades on complex meshes while smoothness continues to increase underscores that smoothing alone is not a reliable proxy for correctness. This decoupling suggests that automated parameter selection strategies should balance both stability and geometric accuacy, rather than maximizing smoothness.
+\newline
+These results have practical implications for geometry processing pipelines that rely on geodesic distances. A single global choice of $t$
+ is unlikely to be optimal across datasets with varying morphology and mesh quality. Instead, mesh-aware heuristics—such as scaling $t$ 
+ with local feature size, triangle quality, or noise level—may yield more consistent performance. More broadly, the observed morphology dependence motivates adaptive or locally varying diffusion times as a promising direction for improving robustness of the heat method in real-world applications.
+ \section{Conclusions}
+ We presented an empirical sensitivity analysis of the heat method’s diffusion time parameter $t$
+ across multiple meshes with varying morphology, comparing heat-method geodesic distances to fast marching distances as a reference. The results demonstrate a consistent stability–smoothing tradeoff: small diffusion times yield unstable, noisy distance fields, while large diffusion times oversmooth geodesic structure on meshes with thin features, leading to increased error. Smooth, uniformly sampled surfaces tolerate larger diffusion times with monotonic accuracy improvements, whereas scanned or geometrically complex meshes exhibit a narrow optimal regime at intermediate values of $t$.
+These findings provide practical guidance for selecting diffusion parameters in geometry processing workflows and caution against one-size-fits-all defaults. Future work includes developing adaptive strategies for choosing $t$
+ based on mesh quality or local feature scale, exploring spatially varying diffusion times, and evaluating the impact of these choices on downstream tasks such as segmentation, correspondence, and parameterization.
+\end{document}
